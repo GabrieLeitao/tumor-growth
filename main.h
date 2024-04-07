@@ -51,7 +51,7 @@
 #define PERSISTENCE 0.5
 #define FREQUENCY 0.1
 
-#define VEIN_THRESHOLD 0.2
+#define VEIN_THRESHOLD 0.1
 
 #define SIMULATION_DELAY 500000 // Delay between simulation steps in microseconds
 
@@ -94,6 +94,7 @@ typedef struct veincell
 typedef struct cell 
 {
     int x, y, size;
+    float noise;
     int age;
     float nutrient_level;
     float oxygen_level;
@@ -117,7 +118,7 @@ float dotGridGradient(int ix, int iy, float x, float y, Vector2 gradients[][GRID
 float perlinNoise(float x, float y, Vector2 gradients[][GRID_SIZE]);
 
 void seedInitialVeinPoints(CELL grid[][GRID_SIZE], int numPoints);
-void growVeins(CELL grid[][GRID_SIZE], int x, int y, float noise);
+void growVeins(CELL grid[][GRID_SIZE], int x, int y, int strength);
 Vector2 findCLosestVeinPoint(CELL grid[][GRID_SIZE], int x, int y);
 
 void initializeTissue(CELL grid[][GRID_SIZE]);

@@ -2,7 +2,7 @@
 
 int main() 
 {
-    srand(time(NULL));
+    srand(42);
     CELL grid[GRID_SIZE][GRID_SIZE]; // Grid to represent the terminal display
 
     int pos[2] = {0, 0};
@@ -33,9 +33,7 @@ void initializeTissue(CELL grid[][GRID_SIZE])
 // Initialize grid with empty spaces
 void generateTissue(CELL grid[][GRID_SIZE]) 
 {
-    // srand(42);
     Vector2 gradients[GRID_SIZE][GRID_SIZE];
-    // int visited[GRID_SIZE][GRID_SIZE] = {0};
     float total, angle, frequency, amplitude, maxNoiseValue, noise;
     // Generate random gradients
     for (int x = 0; x < GRID_SIZE; x++)
@@ -59,11 +57,12 @@ void generateTissue(CELL grid[][GRID_SIZE])
                 frequency *= 2;
             }
             noise = total / maxNoiseValue;
+            grid[x][y].noise = noise;
 
-            if (grid[x][y].type = VEIN) 
+            if (grid[x][y].type == TISSUE_CELL) 
             {
                 // Start vein growth
-                growVeins(grid, x, y, noise);
+                growVeins(grid, x, y, 12);
             }
         }
     }
@@ -105,35 +104,45 @@ float perlinNoise(float x, float y, Vector2 gradients[][GRID_SIZE])
     return lerp(ix0, ix1, sy);
 }
 
-void growVeins(CELL grid[][GRID_SIZE], int x, int y, float noise)
+void growVeins(CELL grid[][GRID_SIZE], int x, int y, int strength)
 {
     // Base case: if the current point is out of bounds or already visited
-    if (x < 0 || x >= GRID_SIZE || y < 0 || y >= GRID_SIZE || noise > VEIN_THRESHOLD) {
+    if (x < 0 || x >= GRID_SIZE || y < 0 || y >= GRID_SIZE || grid[x][y].noise <= VEIN_THRESHOLD) {
         return;
     }
-
-    if (grid[x][y].type == TISSUE_CELL)
-    {
-        // Convert tissue cell to vein cell
-        grid[x][y].type = VEIN_CELL;
-
-        Vector2 vein_point = findCLosestVeinPoint(grid, x, y);
-        Vector2 direction = {floor(vein_point.x - x), floor(vein_point.y - y)};
-
-        if (abs(direction.x) > 1)
-            direction.x /= abs(direction.x);
-        if (abs(direction.y) > 1)
-            direction.y /= abs(direction.y);
-
-        printf("Direction: (%f, %f)\n", direction.x, direction.y);
-
-        // Recursively grow veins in neighboring cells
-        growVeins(grid, x + direction.x, y + direction.y, noise);
-        // growVeins(grid, x + 1, y, veinThreshold, noise);
-        // growVeins(grid, x - 1, y, veinThreshold, noise);
-        // growVeins(grid, x, y + 1, veinThreshold, noise);
-        // growVeins(grid, x, y - 1, veinThreshold, noise);
+    if (grid[x][y].type == VEIN_CELL) {
+        return;
     }
+    // Convert tissue cell to vein cell
+    grid[x][y].type = VEIN_CELL;
+
+    Vector2 vein_point = findCLosestVeinPoint(grid, x, y);
+    Vector2 direction = {floor(vein_point.x - x), floor(vein_point.y - y)};
+
+    if (abs(direction.x) > 1)
+        direction.x /= abs(direction.x);
+    if (abs(direction.y) > 1)
+        direction.y /= abs(direction.y);
+
+    // Randomize growth direction
+    int dx = rand() % 3 - 1; // Random number between -1 and 1
+    int dy = rand() % 3 - 1;
+
+    // Bias growth towards neighboring vein cells
+    for (int i = -1; i <= 1; i++) {
+        for (int j = -1; j <= 1; j++) {
+            int nx = x + dx + i;
+            int ny = y + dy + j;
+            if (grid[nx][ny].type == VEIN_CELL && rand() % strength) {
+                // Move towards neighboring vein cell
+                growVeins(grid, nx, ny, strength - 2);
+                return; // Exit to avoid branching if vein found
+            }
+        }
+    }
+
+    // No neighboring vein cell found, continue growth
+    growVeins(grid, x + direction.x, y + direction.y, strength - 1);
 }
 
 Vector2 findCLosestVeinPoint(CELL grid[][GRID_SIZE], int x, int y)
@@ -144,6 +153,9 @@ Vector2 findCLosestVeinPoint(CELL grid[][GRID_SIZE], int x, int y)
     {
         for (int j = 0; j < GRID_SIZE; j++)
         {
+            if (i == x || y == j)
+                continue;
+
             distance = sqrt(pow(i - x, 2) + pow(j - y, 2));
             if (distance < min_distance)
             {
